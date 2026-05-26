@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Briefed — Instant Case Briefs for Law Students</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --burgundy: #3B1219;
+  --burgundy2: #4A1A22;
+  --burgundy3: #5C2230;
+  --red: #C8102E;
+  --red2: #E8294A;
+  --red-bg: #FFF1F3;
+  --red-light: #FECDD3;
+  --surface: #F8F9FB;
+  --surface2: #F1F3F7;
+  --white: #FFFFFF;
+  --text: #111827;
+  --text2: #374151;
+  --muted: #6B7280;
+  --border: #E5E7EB;
+  --border2: #D1D5DB;
+  --success: #059669;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --r: 8px;
+  --rl: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); color: var(--text); background: var(--white); overflow-x: hidden; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── NAV ───────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  height: 56px;
+  display: flex; align-items: center;
+  padding: 0 40px;
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo { width: 34px; height: 34px; }
+.nav-wordmark { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--text); }
+.nav-links { display: flex; align-items: center; gap: 4px; margin-left: 36px; }
+.nav-link { font-size: 13px; color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; border: none; background: none; font-family: var(--sans); transition: all 0.12s; }
+.nav-link:hover { color: var(--text2); background: var(--surface); }
+.nav-link.active { color: var(--red); font-weight: 500; }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.btn { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 8px 18px; border-radius: var(--r); cursor: pointer; border: none; transition: all 0.15s; }
+.btn-ghost { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+.btn-ghost:hover { background: var(--surface); }
+.btn-red { background: var(--red); color: white; }
+.btn-red:hover { background: var(--red2); }
+.btn-lg { padding: 13px 28px; font-size: 15px; border-radius: var(--rl); }
+.btn-xl { padding: 15px 36px; font-size: 16px; border-radius: var(--rl); }
+
+/* ── PAGES ─────────────────────────────────────────────── */
+.page { display: none; min-height: 100vh; padding-top: 56px; }
+.page.active { display: block; }
+
+/* ── HERO ──────────────────────────────────────────────── */
+.hero {
+  background: var(--burgundy);
+  padding: 80px 40px 72px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(200,16,46,0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 11px; font-family: var(--mono);
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 28px;
+  letter-spacing: 0.04em;
+}
+.hero-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--red2); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.hero h1 {
+  font-family: var(--serif);
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 600;
+  color: white;
+  line-height: 1.15;
+  max-width: 720px;
+  margin: 0 auto 18px;
+  letter-spacing: -0.01em;
+}
+.hero h1 em { font-style: italic; color: var(--red-light); }
+.hero-sub {
+  font-size: 17px; color: rgba(255,255,255,0.55);
+  max-width: 480px; margin: 0 auto 36px;
+  line-height: 1.7;
+}
+.hero-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.hero-note { margin-top: 14px; font-size: 12px; color: rgba(255,255,255,0.3); }
+.hero-stats {
+  display: flex; justify-content: center; gap: 48px;
+  margin-top: 56px; padding-top: 40px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.hero-stat-val { font-family: var(--serif); font-size: 32px; font-weight: 600; color: white; }
+.hero-stat-label { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+/* ── UPLOAD SECTION ────────────────────────────────────── */
+.upload-section { background: var(--surface); padding: 56px 40px; }
+.section-header { text-align: center; margin-bottom: 36px; }
+.section-tag { font-size: 10px; font-family: var(--mono); color: var(--red); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 500; margin-bottom: 10px; }
+.section-title { font-family: var(--serif); font-size: 30px; font-weight: 500; color: var(--text); margin-bottom: 10px; }
+.section-sub { font-size: 15px; color: var(--muted); max-width: 440px; margin: 0 auto; line-height: 1.6; }
+.upload-container { max-width: 680px; margin: 0 auto; }
+.drop-zone {
+  background: var(--white);
+  border: 2px dashed var(--border2);
+  border-radius: var(--rl);
+  padding: 52px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.drag { border-color: var(--red); background: var(--red-bg); }
+.drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--red-bg);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+}
+.drop-icon svg { width: 22px; height: 22px; }
+.drop-title { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.drop-sub { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.drop-formats { display: flex; gap: 7px; justify-content: center; }
+.fmt { font-size: 10px; font-family: var(--mono); padding: 3px 10px; border-radius: 10px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+
+/* ── PROCESSING ────────────────────────────────────────── */
+.proc-view {
+  max-width: 680px; margin: 0 auto;
+  background: var(--white); border-radius: var(--rl);
+  border: 1px solid var(--border);
+  padding: 48px 32px;
+  text-align: center;
+  display: none;
+}
+.proc-view.active { display: block; }
+.proc-spinner {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--red);
+  animation: spin 0.75s linear infinite;
+  margin: 0 auto 20px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.proc-title { font-family: var(--serif); font-size: 19px; color: var(--text); margin-bottom: 6px; }
+.proc-stage { font-size: 13px; color: var(--muted); font-family: var(--mono); margin-bottom: 28px; }
+.proc-steps { display: flex; flex-direction: column; gap: 6px; max-width: 340px; margin: 0 auto; text-align: left; }
+.proc-step { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); padding: 9px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--border); }
+.proc-step.done { color: var(--success); border-color: #A7F3D0; background: #F0FDF4; }
+.proc-step.current { color: var(--red); border-color: var(--red-light); background: var(--red-bg); font-weight: 500; }
+.ps-ic { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ── BRIEF RESULT ──────────────────────────────────────── */
+.result-view { max-width: 780px; margin: 0 auto; display: none; }
+.result-view.active { display: block; }
+.result-header-card {
+  background: var(--burgundy);
+  border-radius: var(--rl);
+  padding: 24px 28px;
+  margin-bottom: 12px;
+}
+.rh-name { font-family: var(--serif); font-size: 22px; font-weight: 500; color: white; margin-bottom: 5px; line-height: 1.3; }
+.rh-cite { font-size: 12px; font-family: var(--mono); color: var(--red-light); opacity: 0.8; margin-bottom: 16px; }
+.rh-meta { display: flex; gap: 28px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px; flex-wrap: wrap; }
+.rh-field { }
+.rh-key { font-size: 9px; font-family: var(--mono); color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+.rh-val { font-size: 12px; color: rgba(255,255,255,0.65); }
+.result-actions { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.result-actions .btn-ghost { font-size: 12px; padding: 7px 14px; }
+.result-actions .btn-red { font-size: 12px; padding: 7px 14px; }
+.result-filename { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-left: auto; }
+.section-card { background: var(--white); border-radius: var(--r); border: 1px solid var(--border); margin-bottom: 6px; overflow: hidden; }
+.sc-hd { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+.sc-hd:hover { background: var(--surface2); }
+.sc-num { font-size: 10px; font-family: var(--mono); color: var(--red); background: var(--red-bg); padding: 2px 8px; border-radius: 8px; }
+.sc-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.sc-chev { margin-left: auto; color: var(--muted); transition: transform 0.18s; }
+.sc-chev.open { transform: rotate(180deg); }
+.sc-body { padding: 16px; font-size: 13.5px; line-height: 1.85; color: var(--text2); display: none; }
+.sc-body.open { display: block; }
+.sc-body p { margin-bottom: 9px; }
+.sc-body p:last-child { margin-bottom: 0; }
+.sc-body.empty { color: var(--muted); font-style: italic; }
+.result-back { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 20px; border: none; background: none; font-family: var(--sans); padding: 0; }
+.result-back:hover { color: var(--red); }
+
+/* ── HOW IT WORKS ──────────────────────────────────────── */
+.how-page { background: var(--white); }
+.how-hero { background: var(--burgundy); padding: 64px 40px 56px; text-align: center; }
+.how-hero h1 { font-family: var(--serif); font-size: 40px; font-weight: 600; color: white; margin-bottom: 14px; }
+.how-hero p { font-size: 16px; color: rgba(255,255,255,0.5); max-width: 440px; margin: 0 auto; line-height: 1.7; }
+.how-steps { max-width: 760px; margin: 0 auto; padding: 64px 40px; }
+.how-step { display: grid; grid-template-columns: 56px 1fr; gap: 24px; margin-bottom: 52px; align-items: start; }
+.how-step:last-child { margin-bottom: 0; }
+.how-num {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--red-bg);
+  border: 2px solid var(--red-light);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-size: 20px; font-weight: 600;
+  color: var(--red); flex-shrink: 0; margin-top: 4px;
+}
+.how-step-title { font-family: var(--serif); font-size: 22px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+.how-step-desc { font-size: 15px; color: var(--muted); line-height: 1.75; margin-bottom: 12px; }
+.how-step-detail {
+  background: var(--surface);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+}
+.how-detail-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 6px; }
+.how-detail-item:last-child { margin-bottom: 0; }
+.how-detail-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--red); flex-shrink: 0; margin-top: 7px; }
+.how-divider { width: 1px; background: var(--border); margin: 0 0 0 27px; height: 24px; margin-bottom: 0; display: block; }
+.brief-structure { max-width: 760px; margin: 0 auto; padding: 0 40px 64px; }
+.bs-title { font-family: var(--serif); font-size: 26px; font-weight: 500; margin-bottom: 24px; color: var(--text); }
+.bs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bs-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; }
+.bs-num { font-size: 10px; font-family: var(--mono); color: var(--red); background: var(--red-bg); padding: 2px 8px; border-radius: 8px; margin-bottom: 8px; display: inline-block; }
+.bs-label { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.bs-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.how-cta { background: var(--burgundy); padding: 56px 40px; text-align: center; }
+.how-cta h2 { font-family: var(--serif); font-size: 30px; color: white; margin-bottom: 10px; }
+.how-cta p { font-size: 15px; color: rgba(255,255,255,0.45); margin-bottom: 28px; }
+
+/* ── LIBRARY PAGE ──────────────────────────────────────── */
+.lib-page { background: var(--surface); min-height: 100vh; }
+.lib-header { background: var(--white); border-bottom: 1px solid var(--border); padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+.lib-header h1 { font-family: var(--serif); font-size: 22px; font-weight: 500; }
+.lib-header p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.lib-body { padding: 28px 40px; max-width: 1100px; margin: 0 auto; }
+.lib-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+.lib-stat { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 20px; }
+.lib-stat-val { font-family: var(--serif); font-size: 28px; font-weight: 600; color: var(--text); }
+.lib-stat-label { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.lib-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--rl); padding: 20px 22px;
+  cursor: pointer; transition: all 0.15s;
+}
+.lib-card:hover { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
+.lc-name { font-family: var(--serif); font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 4px; line-height: 1.35; }
+.lc-cite { font-size: 11px; font-family: var(--mono); color: var(--red); margin-bottom: 12px; }
+.lc-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+.lc-tag { font-size: 10px; padding: 2px 8px; border-radius: 8px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+.lc-foot { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); }
+.lc-date { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+.lc-btns { display: flex; gap: 6px; }
+.lc-btn { font-size: 11px; padding: 4px 11px; border-radius: 5px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: var(--sans); transition: all 0.12s; }
+.lc-btn:hover { background: var(--surface); color: var(--text2); }
+.lc-btn.primary { border-color: var(--red-light); color: var(--red); background: var(--red-bg); }
+
+/* ── FOOTER ────────────────────────────────────────────── */
+.footer { background: var(--burgundy); padding: 40px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.footer-brand { display: flex; align-items: center; gap: 10px; }
+.footer-wordmark { font-family: var(--serif); font-size: 16px; color: rgba(255,255,255,0.7); }
+.footer-copy { font-size: 12px; color: rgba(255,255,255,0.3); }
+.footer-links { display: flex; gap: 20px; }
+.footer-link { font-size: 12px; color: rgba(255,255,255,0.35); cursor: pointer; border: none; background: none; font-family: var(--sans); transition: color 0.12s; }
+.footer-link:hover { color: rgba(255,255,255,0.7); }
+
+/* ── NOTIFICATION ──────────────────────────────────────── */
+.notif { position: fixed; bottom: 24px; right: 24px; background: var(--burgundy); color: rgba(255,255,255,0.9); font-size: 12px; padding: 10px 18px; border-radius: var(--r); border: 1px solid rgba(255,255,255,0.1); opacity: 0; transform: translateY(8px); transition: all 0.22s; pointer-events: none; font-family: var(--mono); z-index: 200; }
+.notif.show { opacity: 1; transform: translateY(0); }
+
+
+/* ── ADDITIONAL MERGED STYLES ── */
+.proc-view {
+  max-width: 680px; margin: 0 auto;
+  background: var(--white);
+  border-radius: var(--rl);
+  border: 1px solid var(--border);
+  padding: 48px 32px;
+  text-align: center;
+  display: none;
+}
+.proc-view.active { display: block; }
+.proc-spinner {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--red);
+  animation: spin 0.75s linear infinite;
+  margin: 0 auto 20px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.proc-title { font-family: var(--serif); font-size: 19px; color: var(--text); margin-bottom: 6px; }
+.proc-detail { font-size: 13px; color: var(--muted); font-family: var(--mono); margin-bottom: 28px; }
+.proc-steps { display: flex; flex-direction: column; gap: 6px; max-width: 340px; margin: 0 auto; text-align: left; }
+.proc-step { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); padding: 9px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--border); }
+.proc-step.done { color: var(--success); border-color: #A7F3D0; background: #F0FDF4; }
+.proc-step.current { color: var(--red); border-color: var(--red-light); background: var(--red-bg); font-weight: 500; }
+.ps-ic { width: 14px; height: 14px; flex-shrink: 0; }
+.result-view { max-width: 780px; margin: 0 auto; display: none; }
+.result-view.active { display: block; }
+.result-header-card { background: var(--burgundy); border-radius: var(--rl); padding: 24px 28px; margin-bottom: 12px; }
+.rh-name { font-family: var(--serif); font-size: 22px; font-weight: 500; color: white; margin-bottom: 5px; line-height: 1.3; }
+.rh-cite { font-size: 12px; font-family: var(--mono); color: var(--red-light); opacity: 0.8; margin-bottom: 16px; }
+.rh-meta { display: flex; gap: 28px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px; flex-wrap: wrap; }
+.rh-key { font-size: 9px; font-family: var(--mono); color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+.rh-val { font-size: 12px; color: rgba(255,255,255,0.65); }
+.result-actions { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.result-actions .btn { font-size: 12px; padding: 7px 14px; }
+.result-filename { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-left: auto; }
+.section-card { background: var(--white); border-radius: var(--r); border: 1px solid var(--border); margin-bottom: 6px; overflow: hidden; }
+.sc-hd { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+.sc-hd:hover { background: var(--surface2); }
+.sc-num { font-size: 10px; font-family: var(--mono); color: var(--red); background: var(--red-bg); padding: 2px 8px; border-radius: 8px; }
+.sc-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.sc-chev { margin-left: auto; color: var(--muted); transition: transform 0.18s; }
+.sc-chev.open { transform: rotate(180deg); }
+.sc-body { padding: 16px; font-size: 13.5px; line-height: 1.85; color: var(--text2); display: none; }
+.sc-body.open { display: block; }
+.sc-body p { margin-bottom: 9px; }
+.sc-body p:last-child { margin-bottom: 0; }
+.sc-body.empty { color: var(--muted); font-style: italic; }
+.result-back { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 20px; border: none; background: none; font-family: var(--sans); padding: 0; }
+.result-back:hover { color: var(--red); }
+.err-hint { background: #FFF7ED; border: 1px solid #FED7AA; border-radius: var(--r); padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: #92400E; line-height: 1.6; display: none; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" onclick="showPage('home')" style="cursor:pointer">
+    <svg class="nav-logo" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="13" width="30" height="20" rx="3.5" fill="#3B1219"/>
+      <path d="M13 13V10.5C13 9.12 14.12 8 15.5 8h5C21.88 8 23 9.12 23 10.5V13" stroke="#3B1219" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      <line x1="3" y1="22" x2="33" y2="22" stroke="#C8102E" stroke-width="1.2" opacity="0.35"/>
+      <line x1="18" y1="16" x2="18" y2="29" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="11.5" y1="18.5" x2="24.5" y2="18.5" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
+      <line x1="11.5" y1="18.5" x2="10" y2="22" stroke="white" stroke-width="1" stroke-linecap="round"/>
+      <line x1="11.5" y1="18.5" x2="13" y2="22" stroke="white" stroke-width="1" stroke-linecap="round"/>
+      <line x1="24.5" y1="18.5" x2="23" y2="22" stroke="white" stroke-width="1" stroke-linecap="round"/>
+      <line x1="24.5" y1="18.5" x2="26" y2="22" stroke="white" stroke-width="1" stroke-linecap="round"/>
+      <path d="M10 22 Q11.5 24.5 13 22" stroke="white" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+      <path d="M23 22 Q24.5 24.5 26 22" stroke="white" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+      <circle cx="18" cy="15.5" r="1.2" fill="white"/>
+      <line x1="15.5" y1="29" x2="20.5" y2="29" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <span class="nav-wordmark">Briefed</span>
+  </a>
+  <div class="nav-links">
+    <button class="nav-link active" id="nl-home" onclick="showPage('home')">Home</button>
+    <button class="nav-link" id="nl-how" onclick="showPage('how')">How it works</button>
+    <button class="nav-link" id="nl-library" onclick="showPage('library')">My briefs</button>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-ghost" onclick="showPage('home');setTimeout(()=>document.getElementById('upload-anchor').scrollIntoView({behavior:'smooth'}),100)">Upload a case</button>
+    <button class="btn btn-red" onclick="showPage('home');setTimeout(()=>document.getElementById('upload-anchor').scrollIntoView({behavior:'smooth'}),100)">Get started free</button>
+  </div>
+</nav>
+
+<!-- ═══════════════ HOME PAGE ═══════════════ -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <h1>Your case briefs,<br><em>done in seconds.</em></h1>
+    <p class="hero-sub">Upload any court judgment and Briefed extracts a structured, accurate case brief — ready to study, cite, and download.</p>
+    <div class="hero-actions">
+      <button class="btn btn-red btn-xl" onclick="document.getElementById('upload-anchor').scrollIntoView({behavior:'smooth'})">Upload a judgment</button>
+      <button class="btn btn-xl" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.15)" onclick="showPage('how')">See how it works</button>
+    </div>
+    <p class="hero-note">No account needed &nbsp;·&nbsp; PDF, DOCX & TXT supported &nbsp;·&nbsp; Free to use</p>
+    <div class="hero-stats">
+      <div><div class="hero-stat-val">7</div><div class="hero-stat-label">Sections extracted</div></div>
+      <div><div class="hero-stat-val">&lt;30s</div><div class="hero-stat-label">Average processing time</div></div>
+      <div><div class="hero-stat-val">PDF</div><div class="hero-stat-label">Download-ready output</div></div>
+    </div>
+  </div>
+
+  <div class="upload-section" id="upload-anchor">
+    <div class="section-header">
+      <div class="section-tag">Start here</div>
+      <div class="section-title">Upload your judgment</div>
+      <div class="section-sub">Drop in any court document and we'll extract the brief for you.</div>
+    </div>
+    <div class="upload-container">
+
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".pdf,.docx,.txt">
+        <div class="drop-icon">
+          <svg viewBox="0 0 22 22" fill="none"><path d="M11 15V5M11 5L7 9M11 5L15 9" stroke="#C8102E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="#C8102E" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="drop-title">Drop your court document here</div>
+        <div class="drop-sub">Or click to browse — we'll handle the rest</div>
+        <button class="btn btn-red btn-lg" style="pointer-events:none">Browse files</button>
+        <div class="upload-formats">
+          <span class="fmt-pill">PDF</span><span class="fmt-pill">DOCX</span><span class="fmt-pill">TXT</span>
+        </div>
+      </div>
+
+      <div class="proc-view" id="proc-view">
+        <div class="proc-spinner"></div>
+        <div class="proc-title">Reading your document</div>
+        <div class="proc-detail" id="proc-detail">Initialising...</div>
+        <div class="proc-steps" id="proc-steps">
+          <div class="proc-step" id="ps-0"><svg class="ps-ic" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>Reading document</div>
+          <div class="proc-step" id="ps-1"><svg class="ps-ic" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>Identifying legal content</div>
+          <div class="proc-step" id="ps-2"><svg class="ps-ic" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>Extracting facts &amp; issue</div>
+          <div class="proc-step" id="ps-3"><svg class="ps-ic" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>Capturing holding &amp; ratio</div>
+          <div class="proc-step" id="ps-4"><svg class="ps-ic" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>Attributing judicial reasoning</div>
+          <div class="proc-step" id="ps-5"><svg class="ps-ic" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>Building your brief</div>
+        </div>
+      </div>
+
+      <div class="result-view" id="result-view">
+        <button class="result-back" onclick="resetUpload()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Upload another document
+        </button>
+        <div class="err-hint" id="err-hint"></div>
+        <div class="result-header-card">
+          <div class="rh-name" id="rh-name"></div>
+          <div class="rh-cite" id="rh-cite"></div>
+          <div class="rh-meta">
+            <div><div class="rh-key">Court</div><div class="rh-val" id="rh-court"></div></div>
+            <div><div class="rh-key">Year</div><div class="rh-val" id="rh-year"></div></div>
+            <div><div class="rh-key">Judges</div><div class="rh-val" id="rh-judges"></div></div>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-red" onclick="exportBrief()">Download PDF</button>
+          <button class="btn btn-ghost" id="save-btn" onclick="saveToLibrary()">Save to My Briefs</button>
+          <span class="result-filename" id="result-filename"></span>
+        </div>
+        <div id="sections-container"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-brand"><span class="footer-wordmark">Briefed</span></div>
+    <span class="footer-copy">&copy; 2026 Briefed. Made by Jakob Delgado.</span>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showPage('how')">How it works</button>
+      <button class="footer-link" onclick="showPage('library')">My briefs</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ HOW IT WORKS ═══════════════ -->
+<div class="page" id="page-how">
+  <div class="how-page">
+    <div class="how-hero">
+      <h1>How Briefed works</h1>
+      <p>Three steps from judgment to structured brief — no manual work, no guessing.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-num">1</div>
+        <div>
+          <div class="how-step-title">Upload your judgment</div>
+          <div class="how-step-desc">Drop in any court document — a judgment, reported case, or case notes — as a PDF, Word doc, or plain text file.</div>
+          <div class="how-step-detail">
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Supports PDF, DOCX, and TXT formats</div>
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Works with Australian, UK, and international cases</div>
+            <div class="how-detail-item"><div class="how-detail-dot"></div>No account or sign-up required</div>
+          </div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">2</div>
+        <div>
+          <div class="how-step-title">Briefed reads the case</div>
+          <div class="how-step-desc">The document is parsed and analysed. Briefed identifies legally relevant content, attributes reasoning to specific judges, and structures everything into a consistent format.</div>
+          <div class="how-step-detail">
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Only information from your document is used — no guessing</div>
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Each judge's reasoning is kept separate and attributed correctly</div>
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Missing sections are clearly marked, not invented</div>
+          </div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">3</div>
+        <div>
+          <div class="how-step-title">Download your brief</div>
+          <div class="how-step-desc">Your structured case brief is ready to read on screen or download as a formatted PDF — suitable for tutorials, exams, and study notes.</div>
+          <div class="how-step-detail">
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Seven structured sections covering the full brief</div>
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Clean, formatted PDF ready to print or share</div>
+            <div class="how-detail-item"><div class="how-detail-dot"></div>Save to your brief library for future reference</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="brief-structure">
+      <div class="bs-title">What's in your brief</div>
+      <div class="bs-grid">
+        <div class="bs-card"><div class="bs-num">01</div><div class="bs-label">Relevant Facts</div><div class="bs-desc">The legally material facts — what the court actually needed to decide the case.</div></div>
+        <div class="bs-card"><div class="bs-num">02</div><div class="bs-label">Issue</div><div class="bs-desc">The precise legal question the court was asked to resolve.</div></div>
+        <div class="bs-card"><div class="bs-num">03</div><div class="bs-label">Holding</div><div class="bs-desc">The court's final answer — clear and definitive.</div></div>
+        <div class="bs-card"><div class="bs-num">04</div><div class="bs-label">Ratio Decidendi</div><div class="bs-desc">The controlling legal principle that makes the case binding.</div></div>
+        <div class="bs-card"><div class="bs-num">05</div><div class="bs-label">Reasoning</div><div class="bs-desc">How each judge applied the law to the facts, attributed by name.</div></div>
+        <div class="bs-card"><div class="bs-num">06</div><div class="bs-label">Dissent</div><div class="bs-desc">Any minority judgment — only included if it appears in the document.</div></div>
+        <div class="bs-card"><div class="bs-num">07</div><div class="bs-label">Notes</div><div class="bs-desc">Key principles and doctrinal significance for study and revision.</div></div>
+      </div>
+    </div>
+    <div class="how-cta">
+      <h2>Ready to try it?</h2>
+      <p>Upload your first judgment and have a brief in under a minute.</p>
+      <button class="btn btn-red btn-lg" onclick="showPage('home');setTimeout(()=>document.getElementById('upload-anchor').scrollIntoView({behavior:'smooth'}),100)">Upload a judgment</button>
+    </div>
+    <div class="footer">
+      <div class="footer-brand"><span class="footer-wordmark">Briefed</span></div>
+      <span class="footer-copy">&copy; 2026 Briefed. Made by Jakob Delgado.</span>
+      <div class="footer-links">
+        <button class="footer-link" onclick="showPage('home')">Home</button>
+        <button class="footer-link" onclick="showPage('library')">My briefs</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ LIBRARY PAGE ═══════════════ -->
+<div class="page" id="page-library">
+  <div class="lib-page">
+    <div class="lib-header">
+      <div>
+        <h1>My briefs</h1>
+        <p>Your saved case briefs — ready to review or download</p>
+      </div>
+      <button class="btn btn-primary" onclick="showPage('home');setTimeout(()=>document.getElementById('upload-anchor').scrollIntoView({behavior:'smooth'}),100)">+ Upload new case</button>
+    </div>
+    <div class="lib-body">
+      <div class="lib-stats">
+        <div class="lib-stat"><div class="lib-stat-val" id="lib-count">0</div><div class="lib-stat-label">Saved briefs</div></div>
+        <div class="lib-stat"><div class="lib-stat-val" id="lib-dl-count">0</div><div class="lib-stat-label">PDF downloads</div></div>
+        <div class="lib-stat"><div class="lib-stat-val">7</div><div class="lib-stat-label">Sections per brief</div></div>
+      </div>
+      <div class="lib-grid" id="lib-grid"></div>
+    </div>
+    <div class="footer" style="margin-top:40px">
+      <div class="footer-brand"><span class="footer-wordmark">Briefed</span></div>
+      <span class="footer-copy">&copy; 2026 Briefed. Made by Jakob Delgado.</span>
+      <div class="footer-links">
+        <button class="footer-link" onclick="showPage('home')">Home</button>
+        <button class="footer-link" onclick="showPage('how')">How it works</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+let currentBrief = null;
+let currentFilename = null;
+let savedBriefs = [];
+
+function loadLibrary() {
+  try { savedBriefs = JSON.parse(localStorage.getItem('briefed_library') || '[]'); }
+  catch(e) { savedBriefs = []; }
+}
+function persistLibrary() {
+  try { localStorage.setItem('briefed_library', JSON.stringify(savedBriefs)); } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════ */
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+  const m = {home:'nl-home', how:'nl-how', library:'nl-library'};
+  if (m[p]) document.getElementById(m[p]).classList.add('active');
+  window.scrollTo(0, 0);
+  if (p === 'library') renderLibrary();
+}
+
+/* ═══════════════════════════════════════════════════════
+   CLEAN TEXT (browser-side)
+═══════════════════════════════════════════════════════ */
+function cleanText(raw) {
+  if (!raw) return '';
+  var s = String(raw);
+  s = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var out = '';
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    if (c === 9 || c === 10 || c === 13 || (c >= 32 && c !== 127)) out += s[i];
+  }
+  out = out.replace(/[ \t]{3,}/g, '  ').replace(/\n{5,}/g, '\n\n\n');
+  return out.trim().substring(0, 80000);
+}
+
+/* ═══════════════════════════════════════════════════════
+   FILE READING
+═══════════════════════════════════════════════════════ */
+async function readFileText(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'txt') return file.text();
+  if (ext === 'pdf') {
+    let attempts = 0;
+    while (typeof pdfjsLib === 'undefined' && attempts < 25) {
+      await new Promise(r => setTimeout(r, 200));
+      attempts++;
+    }
+    if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      let lastY = null, pageText = '';
+      for (const item of content.items) {
+        const y = item.transform ? Math.round(item.transform[5]) : null;
+        if (lastY !== null && y !== null && Math.abs(y - lastY) > 5) pageText += '\n';
+        pageText += item.str;
+        lastY = y;
+      }
+      fullText += pageText + '\n\n';
+    }
+    return fullText;
+  }
+  if (ext === 'docx' && typeof mammoth !== 'undefined') {
+    try {
+      const buf = await file.arrayBuffer();
+      const { value } = await mammoth.extractRawText({ arrayBuffer: buf });
+      return value;
+    } catch(e) {}
+  }
+  return file.text();
+}
+
+/* ═══════════════════════════════════════════════════════
+   UPLOAD INIT — addEventListener only, no inline handlers
+═══════════════════════════════════════════════════════ */
+function initUpload() {
+  const zone = document.getElementById('drop-zone');
+  const inp  = document.getElementById('file-input');
+  if (!zone || !inp) return;
+  zone.addEventListener('dragover',  function(e) { e.preventDefault(); e.stopPropagation(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', function(e) { e.preventDefault(); zone.classList.remove('drag'); });
+  zone.addEventListener('drop',      function(e) {
+    e.preventDefault(); e.stopPropagation(); zone.classList.remove('drag');
+    const f = e.dataTransfer && e.dataTransfer.files[0];
+    if (f) processFile(f);
+  });
+  zone.addEventListener('click', function(e) { if (e.target !== inp) inp.click(); });
+  inp.addEventListener('change', function(e) { if (e.target.files && e.target.files[0]) processFile(e.target.files[0]); });
+}
+
+/* ═══════════════════════════════════════════════════════
+   PROCESSING ANIMATION
+═══════════════════════════════════════════════════════ */
+function runAnimation() {
+  const stages = [
+    'Parsing file contents...',
+    'Scanning for case structure...',
+    'Isolating material facts...',
+    'Identifying the decision...',
+    'Mapping per-judge positions...',
+    'Structuring all sections...'
+  ];
+  return new Promise(resolve => {
+    let step = 0;
+    function tick() {
+      if (step < stages.length) {
+        for (let i = 0; i < 6; i++) {
+          const el = document.getElementById('ps-'+i);
+          if (!el) continue;
+          el.className = 'proc-step' + (i < step ? ' done' : i === step ? ' current' : '');
+          const svg = el.querySelector('svg');
+          if (i < step) svg.innerHTML = '<path d="M3 7l3 3 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>';
+          else if (i === step) svg.innerHTML = '<circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2"/>';
+          else svg.innerHTML = '<circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>';
+        }
+        document.getElementById('proc-detail').textContent = stages[step];
+        step++;
+        setTimeout(tick, 700);
+      } else { resolve(); }
+    }
+    tick();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN PROCESS FILE
+═══════════════════════════════════════════════════════ */
+async function processFile(file) {
+  currentFilename = file.name;
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('proc-view').classList.add('active');
+  document.getElementById('result-view').classList.remove('active');
+
+  const [rawText] = await Promise.all([
+    readFileText(file).catch(err => { console.warn('Read error:', err.message); return ''; }),
+    runAnimation()
+  ]);
+
+  document.getElementById('proc-view').classList.remove('active');
+
+  const clean = cleanText(rawText);
+  if (!clean || clean.length < 40) {
+    document.getElementById('drop-zone').style.display = '';
+    showUploadError('Could not extract text from this file. Try a text-based PDF or paste the judgment text into a .txt file.');
+    return;
+  }
+
+  try {
+    const result = await extractWithClaude(clean, file.name);
+    showResult(result, file.name);
+  } catch(err) {
+    console.error('Extraction error:', err.message);
+    document.getElementById('drop-zone').style.display = '';
+    showUploadError('Extraction failed: ' + err.message + '. Make sure the server is running with: node server.js');
+  }
+}
+
+function showUploadError(msg) {
+  let el = document.getElementById('upload-error-msg');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'upload-error-msg';
+    el.style.cssText = 'background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px 16px;margin:0 auto 14px;max-width:680px;font-size:13px;color:#991B1B;line-height:1.6;text-align:center';
+    const anchor = document.getElementById('upload-anchor');
+    const container = anchor.querySelector('.upload-container');
+    container.insertBefore(el, container.firstChild);
+  }
+  el.textContent = '⚠️ ' + msg;
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 8000);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CLAUDE EXTRACTION — calls /extract on local server
+═══════════════════════════════════════════════════════ */
+async function extractWithClaude(text, filename) {
+  const fetchPromise = fetch('/extract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, filename })
+  });
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Request timed out — is the server running?')), 30000)
+  );
+  const response = await Promise.race([fetchPromise, timeoutPromise]);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Server returned ' + response.status);
+  }
+  const data = await response.json();
+  if (data.error) throw new Error(data.error);
+  return normalise(data, filename);
+}
+
+function normalise(p, filename) {
+  const clean = v => (v || '').trim();
+  return {
+    name:      clean(p.name)      || (filename || '').replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
+    citation:  clean(p.citation),
+    court:     clean(p.court),
+    year:      clean(p.year),
+    judges:    clean(p.judges),
+    facts:     clean(p.facts),
+    issue:     clean(p.issue),
+    holding:   clean(p.holding),
+    ratio:     clean(p.ratio),
+    reasoning: clean(p.reasoning),
+    dissent:   clean(p.dissent),
+    notes:     clean(p.notes),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════
+   SHOW RESULT
+═══════════════════════════════════════════════════════ */
+function g(id) { return (document.getElementById(id) || {}); }
+function ns(v) { return !v || v.trim() === ''; }
+
+function showResult(data, filename) {
+  currentBrief = data;
+  currentFilename = filename;
+
+  g('rh-name').textContent = data.name || 'Untitled case';
+  g('rh-cite').textContent  = data.citation || '';
+  g('rh-court').textContent = data.court || 'Not specified';
+  g('rh-year').textContent  = data.year  || '—';
+  g('rh-judges').textContent= data.judges|| 'Not specified';
+
+  const slug = (filename || data.name || 'brief').replace(/[^\w\s]/g, '').replace(/\s+/g, '_').substring(0, 50);
+  g('result-filename').textContent = 'Case_Brief_' + slug + '.pdf';
+
+  const alreadySaved = savedBriefs.some(b => b.name === data.name && b.citation === data.citation);
+  const sb = document.getElementById('save-btn');
+  if (sb) { sb.textContent = alreadySaved ? '✓ Saved' : 'Save to My Briefs'; sb.disabled = alreadySaved; }
+
+  // Show/hide err hint
+  const allEmpty = !data.facts && !data.issue && !data.holding && !data.ratio && !data.reasoning;
+  const hint = document.getElementById('err-hint');
+  if (hint) {
+    hint.style.display = allEmpty ? 'block' : 'none';
+    hint.textContent = allEmpty ? 'Some sections could not be extracted. This may occur with scanned image PDFs. Try a text-based PDF or .txt file.' : '';
+  }
+
+  const SECTIONS = [
+    ['Relevant Facts', data.facts],
+    ['Issue',          data.issue],
+    ['Holding',        data.holding],
+    ['Ratio Decidendi', data.ratio],
+    ['Reasoning',      data.reasoning],
+    ['Dissent',        data.dissent],
+    ['Notes',          data.notes],
+  ];
+
+  const container = document.getElementById('sections-container');
+  container.innerHTML = '';
+  SECTIONS.forEach(([title, content], i) => {
+    const empty = ns(content);
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    card.innerHTML = `
+      <div class="sc-hd" onclick="toggleSec(${i})">
+        <span class="sc-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="sc-title">${title}</span>
+        <svg class="sc-chev ${i<4?'open':''}" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="sc-body ${i<4?'open':''} ${empty?'empty':''}" id="sc-body-${i}">
+        ${empty ? 'Not found in this document.' : escHtml(content).split('\n\n').map(p => p.trim()).filter(Boolean).map(p => `<p>${p.replace(/\n/g,'<br>')}</p>`).join('')}
+      </div>`;
+    container.appendChild(card);
+  });
+
+  document.getElementById('result-view').classList.add('active');
+  document.getElementById('upload-anchor').scrollIntoView({ behavior: 'smooth' });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleSec(i) {
+  const body = document.getElementById('sc-body-'+i);
+  const chev = body.previousElementSibling.querySelector('.sc-chev');
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+function resetUpload() {
+  document.getElementById('drop-zone').style.display = '';
+  document.getElementById('proc-view').classList.remove('active');
+  document.getElementById('result-view').classList.remove('active');
+  document.getElementById('file-input').value = '';
+  currentBrief = null; currentFilename = null;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SAVE & LIBRARY
+═══════════════════════════════════════════════════════ */
+function saveToLibrary() {
+  if (!currentBrief) return;
+  const already = savedBriefs.some(b => b.name === currentBrief.name && b.citation === currentBrief.citation);
+  if (already) { notify('Already saved'); return; }
+  savedBriefs.unshift({ ...currentBrief, _savedAt: new Date().toISOString(), _filename: currentFilename });
+  persistLibrary();
+  const sb = document.getElementById('save-btn');
+  if (sb) { sb.textContent = '✓ Saved'; sb.disabled = true; }
+  notify('Saved to My Briefs');
+}
+
+function renderLibrary() {
+  loadLibrary();
+  const grid = document.getElementById('lib-grid');
+  const countEl = document.getElementById('lib-count');
+  const dlEl = document.getElementById('lib-dl-count');
+  if (countEl) countEl.textContent = savedBriefs.length;
+  if (dlEl) dlEl.textContent = localStorage.getItem('briefed_dl_count') || '0';
+  grid.innerHTML = '';
+
+  if (!savedBriefs.length) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:60px 24px;background:var(--white);border:1px solid var(--border);border-radius:var(--rl)">
+        <div style="font-family:var(--serif);font-size:18px;color:var(--text);margin-bottom:6px">No briefs saved yet</div>
+        <div style="font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.6">Upload a court judgment and save your first brief here.</div>
+        <button class="btn btn-red" onclick="showPage('home');setTimeout(()=>document.getElementById('upload-anchor').scrollIntoView({behavior:'smooth'}),100)">Upload a judgment</button>
+      </div>`;
+    return;
+  }
+
+  savedBriefs.forEach((c, i) => {
+    const d = c._savedAt ? new Date(c._savedAt) : null;
+    const dateStr = d ? formatDate(d) : 'Saved';
+    const card = document.createElement('div');
+    card.className = 'lib-card';
+    card.innerHTML = `
+      <div class="lc-name">${escHtml(c.name || 'Untitled')}</div>
+      <div class="lc-cite">${escHtml(c.citation || '')}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${escHtml(c.court||'')}${c.year?' · '+c.year:''}</div>
+      <div class="lc-foot">
+        <span class="lc-date">${dateStr}</span>
+        <div class="lc-actions">
+          <button class="lc-btn lc-btn-primary" onclick="exportFromLib(${i})">Download PDF</button>
+          <button class="lc-btn" onclick="viewFromLib(${i})">View</button>
+          <button class="lc-btn" onclick="deleteFromLib(${i})" style="color:var(--red)">✕</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function formatDate(d) {
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  if (diff < 172800) return 'Yesterday';
+  return d.toLocaleDateString('en-AU', {day:'numeric',month:'short',year:'numeric'});
+}
+
+function deleteFromLib(i) {
+  savedBriefs.splice(i, 1);
+  persistLibrary();
+  renderLibrary();
+  notify('Brief removed');
+}
+
+function exportFromLib(i) {
+  currentBrief = savedBriefs[i];
+  const c = parseInt(localStorage.getItem('briefed_dl_count') || '0') + 1;
+  localStorage.setItem('briefed_dl_count', c);
+  exportBrief();
+}
+
+function viewFromLib(i) {
+  currentBrief = savedBriefs[i];
+  currentFilename = savedBriefs[i]._filename || savedBriefs[i].name;
+  showPage('home');
+  setTimeout(() => {
+    showResult(savedBriefs[i], savedBriefs[i]._filename || savedBriefs[i].name);
+  }, 80);
+}
+
+/* ═══════════════════════════════════════════════════════
+   EXPORT PDF
+═══════════════════════════════════════════════════════ */
+function exportBrief() {
+  if (!currentBrief) return;
+  notify('Preparing your PDF...');
+  setTimeout(() => buildPDF(currentBrief), 80);
+}
+
+function notify(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = msg; n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 2800);
+}
+
+function buildPDF(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const PW = 210, PH = 297;
+  const ML = 18, MR = 18, MT = 16, MB = 16;
+  const CW = PW - ML - MR;
+  let y = MT;
+
+  const NAVY   = [59, 18, 25];
+  const NAVY2  = [74, 26, 34];
+  const GOLD   = [200, 16, 46];
+  const CREAM  = [255, 241, 243];
+  const WHITE  = [255, 255, 255];
+  const BODY   = [17, 24, 39];
+  const MUTED  = [107, 114, 128];
+  const LBLUE  = [252, 205, 211];
+
+  function setFont(style, size, color) {
+    doc.setFont('helvetica', style);
+    doc.setFontSize(size);
+    doc.setTextColor(...(color || BODY));
+  }
+
+  function rule(yy, color, thick) {
+    doc.setDrawColor(...(color || GOLD));
+    doc.setLineWidth(thick || 0.4);
+    doc.line(ML, yy, PW - MR, yy);
+  }
+
+  function checkPage(needed) {
+    if (y + needed > PH - MB) {
+      doc.addPage();
+      y = MT;
+      drawHeader();
+      y += 6;
+    }
+  }
+
+  function drawHeader() {
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, PW, 10, 'F');
+    setFont('normal', 7, [201, 168, 76]);
+    doc.text('CASE BRIEF', ML, 6.5);
+    setFont('normal', 7, [107, 114, 128]);
+    doc.text('Briefed', PW - MR, 6.5, { align: 'right' });
+  }
+
+  function wrapText(text, maxW, fontSize, style) {
+    doc.setFont('helvetica', style || 'normal');
+    doc.setFontSize(fontSize);
+    return doc.splitTextToSize(text, maxW);
+  }
+
+  function sectionLabel(title, num) {
+    checkPage(14);
+    doc.setFillColor(...NAVY2);
+    doc.rect(ML, y, CW, 8, 'F');
+    setFont('bold', 8, GOLD);
+    doc.text(String(num).padStart(2,'0'), ML + 3, y + 5.5);
+    setFont('bold', 8, [232, 216, 176]);
+    doc.text(title.toUpperCase(), ML + 11, y + 5.5);
+    y += 8;
+  }
+
+  function sectionBody(text) {
+    if (!text || text.trim() === '' || text.trim() === 'Not specified.') {
+      checkPage(8);
+      doc.setFillColor(...CREAM);
+      doc.rect(ML, y, CW, 8, 'F');
+      doc.setDrawColor(...GOLD);
+      doc.setLineWidth(0.15);
+      doc.rect(ML, y, CW, 8, 'S');
+      setFont('italic', 9, MUTED);
+      doc.text('Not specified.', ML + 4, y + 5.5);
+      y += 8 + 3;
+      return;
+    }
+    const paragraphs = text.split('\n\n').map(p => p.trim()).filter(Boolean);
+    const startY = y;
+    let blockH = 0;
+    const allLines = [];
+    paragraphs.forEach((para, pi) => {
+      const lines = wrapText(para.replace(/\n/g,' '), CW - 8, 9.5, 'normal');
+      lines.forEach(l => allLines.push({ text: l, gap: false }));
+      if (pi < paragraphs.length - 1) allLines.push({ text: '', gap: true });
+    });
+    const lineH = 5.2;
+    const padV = 5;
+    let bh = padV;
+    allLines.forEach(l => { bh += l.gap ? 2.5 : lineH; });
+    bh += padV;
+
+    checkPage(Math.min(bh, 40));
+    const boxY = y;
+    doc.setFillColor(...CREAM);
+    doc.setDrawColor(220, 215, 200);
+    doc.setLineWidth(0.15);
+    doc.rect(ML, boxY, CW, 0, 'S');
+
+    doc.setFillColor(...GOLD);
+    doc.rect(ML, y, 2, bh, 'F');
+    doc.setFillColor(248, 246, 240);
+    doc.rect(ML + 2, y, CW - 2, bh, 'F');
+    doc.setDrawColor(220, 215, 200);
+    doc.setLineWidth(0.15);
+    doc.rect(ML + 2, y, CW - 2, bh, 'S');
+
+    let ty = y + padV;
+    allLines.forEach(l => {
+      if (l.gap) { ty += 2.5; return; }
+      checkPage(lineH + 2);
+      if (ty > y + bh - padV + 2) {
+        doc.setFillColor(...GOLD);
+        doc.rect(ML, y, 2, bh, 'F');
+        doc.setFillColor(248, 246, 240);
+        doc.rect(ML + 2, y, CW - 2, bh, 'F');
+        doc.setDrawColor(220, 215, 200);
+        doc.setLineWidth(0.15);
+        doc.rect(ML + 2, y, CW - 2, bh, 'S');
+        y = MT + 6;
+        ty = y + padV;
+        bh = allLines.length * lineH + padV * 2;
+      }
+      setFont('normal', 9.5, BODY);
+      doc.text(l.text, ML + 5, ty + 3.8);
+      ty += lineH;
+    });
+    y = boxY + bh + 4;
+  }
+
+  // ── PAGE 1 ──────────────────────────────────────────────────────────
+  drawHeader();
+  y = 18;
+
+  // Case name
+  setFont('bold', 17, NAVY);
+  const nameLines = wrapText(data.name || 'Not specified', CW, 17, 'bold');
+  nameLines.forEach(l => { doc.text(l, ML, y); y += 8; });
+
+  // Citation
+  setFont('italic', 11, BODY);
+  doc.text(data.citation || '', ML, y); y += 6;
+
+  // Meta line
+  const metaParts = [data.court, data.jurisdiction, data.year].filter(Boolean).join('  |  ');
+  setFont('normal', 9, MUTED);
+  doc.text(metaParts, ML, y); y += 4;
+
+  rule(y, GOLD, 0.6); y += 3;
+
+  // Court / Judges bar
+  doc.setFillColor(...NAVY);
+  doc.rect(ML, y, CW, 10, 'F');
+  setFont('bold', 8.5, LBLUE);
+  doc.text('Court:', ML + 3, y + 6.5);
+  setFont('normal', 8.5, [200, 220, 245]);
+  doc.text(data.court || 'Not specified', ML + 20, y + 6.5);
+  setFont('bold', 8.5, LBLUE);
+  doc.text('Judges:', ML + 85, y + 6.5);
+  setFont('normal', 8.5, [200, 220, 245]);
+  const judgesTrunc = (data.judges || 'Not specified').substring(0, 60);
+  doc.text(judgesTrunc, ML + 105, y + 6.5);
+  y += 14;
+
+  // Sections
+  const SECTIONS = [
+    ['Relevant Facts', data.facts],
+    ['Issue', data.issue],
+    ['Holding', data.holding],
+    ['Reason for Decision (Ratio)', data.ratio],
+    ['Reasoning', data.reasoning],
+    ['Dissent (if any)', data.dissent],
+    ['Notes', data.notes],
+  ];
+
+  SECTIONS.forEach(([title, content], i) => {
+    sectionLabel(title, i + 1);
+    sectionBody(content);
+  });
+
+  // Footer on last page
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    rule(PH - MB + 2, [200, 195, 185], 0.3);
+    setFont('italic', 7.5, MUTED);
+    doc.text((data.name || '').substring(0, 70), ML, PH - MB + 6);
+    doc.text('Page ' + p + ' of ' + pageCount, PW - MR, PH - MB + 6, { align: 'right' });
+  }
+
+  const slug = (data.name || 'Case').replace(/[^\w\s]/g,'').replace(/\s+/g,'_').substring(0, 50);
+  doc.save('Case_Brief_' + slug + '.pdf');
+  notify('PDF downloaded.');
+}
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+loadLibrary();
+initUpload();
+</script>
+
+<script>
+  window.pdfjsWorkerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc=window.pdfjsWorkerSrc;}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</body>
+</html>

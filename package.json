@@ -1,0 +1,12 @@
+{
+  "name": "briefed",
+  "version": "3.0.0",
+  "description": "Briefed — Local legal case brief engine. No API key required.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
