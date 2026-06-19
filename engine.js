@@ -104,31 +104,54 @@ function detectHeading(line) {
 
 // ── METADATA EXTRACTION ───────────────────────────────────────────────────────
 
+// Title-case an ALL-CAPS party name, leaving the "v" separator lowercase and
+// preserving Scottish/Irish prefixes (McHugh, MacLeod, O'Brien).
+function titleCaseName(s) {
+      return s.replace(/\s+/g, ' ').trim().split(' ').map(w => {
+              if (/^v\.?$/i.test(w)) return 'v';
+              if (/^(?:and|of|the|for|on|behalf|&)$/i.test(w)) return w.toLowerCase();
+              if (/^Mc[A-Z]/i.test(w)) return 'Mc' + w.charAt(2).toUpperCase() + w.slice(3).toLowerCase();
+              if (/^Mac[A-Z]/i.test(w) && w.length > 4) return 'Mac' + w.charAt(3).toUpperCase() + w.slice(4).toLowerCase();
+              if (/^O'/i.test(w)) return "O'" + w.charAt(2).toUpperCase() + w.slice(3).toLowerCase();
+              return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      }).join(' ');
+}
+
+function cleanCaseName(raw) {
+      return raw
+        .replace(/\s*\bCaseBase\b.*$/i, '')
+        .replace(/\s+BC\d[\w]*.*$/i, '')          // CaseBase doc id, e.g. BC9202680
+        .replace(/\s*[,\-]\s*BC\w*.*$/i, '')
+        .replace(/\s*[\[\(]\d{4}.*$/, '')          // trailing citation
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function extractCaseName(text) {
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      // 1) "X v Y" as a standalone heading line (pre-formatted briefs).
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const allCapsLine = /^([A-Z][A-Z\s,\-'\.&]{2,}?)\s+[Vv]\.?\s+([A-Z][A-Z\s,\-'\.&]{2,}?)(?:\s*[,\-\s]+(?:BC|AC|No)[\w\d\s]+)?(?:\s*[\[\(]\d{4}.*)?$/;
+      const titleCaseLine = /^([A-Z][a-z][A-Za-z\s,\-'\.&]{2,}?)\s+[Vv]\.?\s+([A-Z][a-z][A-Za-z\s,\-'\.&]{2,}?)(?:\s*[\[\(]\d{4}.*)?$/;
+      for (const line of lines.slice(0, 8)) {
+              const clean = line.replace(/\*+/g, '').trim();
+              if (titleCaseLine.test(clean)) return cleanCaseName(clean);
+              if (allCapsLine.test(clean)) return titleCaseName(cleanCaseName(clean));
+      }
 
-  // "X v Y" pattern — all-caps or title case, with optional citation suffix
-  const allCaps = /^([A-Z][A-Z\s,\-'\.&]{2,}?)\s+[Vv]\.?\s+([A-Z][A-Z\s,\-'\.&]{2,}?)(?:\s*[,\-\s]+(?:BC|AC|No)[\w\d\s]+)?(?:\s*[\[\(]\d{4}.*)?$/;
-      const titleCase = /^([A-Z][a-z][A-Za-z\s,\-'\.&]{2,}?)\s+[Vv]\.?\s+([A-Z][a-z][A-Za-z\s,\-'\.&]{2,}?)(?:\s*[\[\(]\d{4}.*)?$/;
+  // 2) Full-text scan for an ALL-CAPS party heading, e.g.
+  //    "CAROL MARY LOUTH v LOUIS DONALD DIPROSE" (CaseBase / reported judgments).
+  const headerAllCaps = text.slice(0, 4000).match(
+              /\b([A-Z][A-Z'.\-]+(?:\s+[A-Z][A-Z'.\-]+){0,4})\s+v\.?\s+([A-Z][A-Z'.\-]+(?:\s+[A-Z][A-Z'.\-]+){0,4})\b/);
+      if (headerAllCaps) return titleCaseName(cleanCaseName(headerAllCaps[0]));
 
-  for (const line of lines.slice(0, 8)) {
-          const clean = line.replace(/\*+/g, '').trim();
-          // Try all-caps first
-        if (allCaps.test(clean)) {
-                  // Strip trailing citation/case number artifacts
-            return clean.replace(/\s*[,\-]\s*BC\w*.*$/i, '').replace(/\s*[\[\(]\d{4}.*$/, '').trim();
-        }
-          if (titleCase.test(clean)) {
-                    return clean.replace(/\s*[\[\(]\d{4}.*$/, '').trim();
-          }
-          // Simple " v " check as fallback
-        if (/\s+v\.?\s+/i.test(clean) && clean.length < 100) {
-                  return clean.replace(/\s*[,\-]\s*BC\w*.*$/i, '').replace(/\s*[\[\(]\d{4}.*$/, '').trim();
-        }
-  }
+  // 3) Title-case "X v Y" anywhere near the top (short form, e.g. "Louth v Diprose").
+  const titleAnywhere = text.slice(0, 1500).match(
+              /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s+v\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b/);
+      if (titleAnywhere) return cleanCaseName(titleAnywhere[0]);
 
+  // 4) Explicit label.
   const labelMatch = text.match(/^case\s+name\s*[:][ \t]*([^\n]+)$/im);
-      if (labelMatch && labelMatch[1].trim()) return labelMatch[1].trim();
+      if (labelMatch && labelMatch[1].trim()) return cleanCaseName(labelMatch[1]);
 
   return 'Not specified';
 }
@@ -170,17 +193,44 @@ function extractCourt(text) {
       return 'Not specified';
 }
 
+// Tidy an ALL-CAPS coram list ("MASON (1) CJ, BRENNAN (2), ... MCHUGH (4) JJ")
+// into "Mason CJ, Brennan, Deane, Dawson, Toohey, Gaudron, McHugh JJ".
+function cleanCoram(s) {
+      return s.replace(/\s*\(\d+\)/g, '')      // drop footnote markers
+        .replace(/\s+/g, ' ')
+        .split(/\s*,\s*/)
+        .map(part => part.trim().split(' ').map(w => {
+                if (/^(?:CJ|ACJ|JJ?|JA|FCJ|LJJ?|MR)$/.test(w)) return w;
+                if (/^MC[A-Z]/.test(w)) return 'Mc' + w.charAt(2) + w.slice(3).toLowerCase();
+                return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+        }).join(' '))
+        .filter(Boolean)
+        .join(', ');
+}
+
 function extractJudges(text) {
       const coram = text.match(/(?:coram|before|bench)\s*[:]\s*([^\n]+)/i);
-      if (coram) return coram[1].trim().replace(/\s+/g, ' ');
+      if (coram && coram[1].trim()) return coram[1].trim().replace(/\s+/g, ' ');
       const label = text.match(/^judges?\s*[:][ \t]*([^\n]+)$/im);
       if (label && label[1].trim()) return label[1].trim();
-      // Scan for judicial titles — prefer the header, then fall back to the
-      // whole document (panels are often named in the holding, e.g. "Gibbs CJ").
-  const titlePattern = /[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:CJ|ACJ|JA|JJ?|FCJ|LJJ?|MR|Justice)/g;
-      const header = text.substring(0, 600).match(titlePattern);
-      const found = (header && header.length > 0) ? header : text.match(titlePattern);
-      if (found && found.length > 0) return [...new Set(found)].slice(0, 8).join(', ');
+
+  // All-caps coram panel near the header (reported / CaseBase judgments).
+  const block = text.slice(0, 2500).match(
+              /((?:[A-Z][A-Z'.]+\s*(?:\(\d+\))?\s*(?:CJ\s*)?,\s*){2,}[A-Z][A-Z'.]+\s*(?:\(\d+\))?\s+JJ?)/);
+      if (block) return cleanCoram(block[1].replace(/^[A-Z]*?(?:AUSTRALIA|WALES|ZEALAND|QUEENSLAND|VICTORIA|TASMANIA|KINGDOM)/, ''));
+
+  // Title-case "Name CJ/J" scan (e.g. "Gibbs CJ"), skipping non-name words so
+  // that "Unreported Judgments" no longer reads as a judge.
+  const STOP = /^(?:The|High|Court|Full|Chief|Unreported|Judgments?|Judgment|And|Of|Australia|New|South|Wales|Supreme|Federal|Order|Appeal|His|Her|Honour|Reasons?|Page)$/;
+      const titlePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(CJ|ACJ|JA|JJ|FCJ|LJJ?|J)\b/g;
+      const found = [];
+      let m;
+      while ((m = titlePattern.exec(text)) !== null) {
+              if (STOP.test(m[1].split(' ')[0])) continue;
+              found.push(m[1] + ' ' + m[2]);
+              if (found.length > 40) break;
+      }
+      if (found.length > 0) return [...new Set(found)].slice(0, 8).join(', ');
       return 'Not specified';
 }
 
@@ -374,43 +424,59 @@ function summariseNotes(raw) {
       return sentences.slice(0, 4).join(' ') || clean.substring(0, 400);
 }
 
+// Hard safety cap so a section is never a multi-thousand-character raw dump.
+function clamp(s, maxChars = 900) {
+      if (!s) return s;
+      s = s.trim();
+      if (s.includes('\n')) {                       // list-style: cap by line count
+              s = s.split('\n').slice(0, 18).join('\n');
+      }
+      if (s.length <= maxChars) return s;
+      let cut = s.slice(0, maxChars);
+      const lastEnd = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+      cut = lastEnd > maxChars * 0.4 ? cut.slice(0, lastEnd + 1) : cut.replace(/\s+\S*$/, '') + '…';
+      return cut.trim();
+}
+
 // ── SIGNAL-BASED FALLBACK ─────────────────────────────────────────────────────
-// For unstructured raw judgments with no headings
+// For unstructured raw judgments with no headings. Best-effort only: regex can
+// locate signal sentences but cannot truly comprehend a judgment.
 
-function fallbackExtract(text, metadata) {
-      const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
+function fallbackExtract(text) {
+      // Paragraphs where available; otherwise sentence units (PDF text often has
+      // no blank lines at all).
+  let units = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
+      if (units.length < 5) {
+              units = text.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 30);
+      }
+      // Strip catalogue / citation / page-count header junk so it can't leak in.
+  const junk = /CaseBase|Unreported\s+Judgments|\b\d+\s+Pages\b|ANZ\s+ConvR|Aust\s+Contract\s+R|\bALJR\b|F\.?C\.?\s*\d|BC\d{6}/i;
+      units = units.filter(u => !junk.test(u));
 
-  const holdingSignal = /\b(held|ordered|appeal\s+(?:allowed|dismissed)|judgment\s+(?:for|against)|the\s+court\s+(?:held|ordered|found))\b/i;
-      const ratioSignal = /\b(the\s+(?:principle|rule)\s+is|ratio\s+decidendi|controlling\s+(?:principle|rule)|as\s+a\s+matter\s+of\s+(?:law|principle))\b/i;
-      const dissentSignal = /\b(dissent(?:ing|ed)?|I\s+respectfully\s+dissent|in\s+dissent|minority\s+(?:judgment|opinion))\b/i;
-      const issueSignal = /\b(question(?:s)?\s+(?:is|are|for|of)|whether|the\s+issue|at\s+issue|in\s+dispute)\b/i;
+  const holdingSignal = /\b(held\s+that|we\s+would\s+(?:allow|dismiss)|appeal\s+(?:should\s+be\s+)?(?:allowed|dismissed)|order(?:ed)?\s+that|judgment\s+(?:for|against)|the\s+court\s+(?:held|ordered|found)|conclude[ds]?\s+that)\b/i;
+      const ratioSignal = /\b(the\s+(?:principle|rule|test)\s+(?:is|for)|ratio\s+decidendi|controlling\s+(?:principle|rule)|as\s+a\s+matter\s+of\s+(?:law|principle)|unconscionable)\b/i;
+      const dissentSignal = /\b(I\s+(?:respectfully\s+)?dissent|dissenting|in\s+dissent|minority\s+(?:judgment|opinion))\b/i;
+      const issueSignal = /\b(the\s+(?:question|issue)\s+(?:is|are|was|for)|whether\s+(?:the|a|an|there|it)|at\s+issue|in\s+dispute|falls?\s+to\s+be\s+(?:determined|decided))\b/i;
 
-  let issuePara = '', holdingPara = '', ratioPara = '', dissentPara = '';
-      const factParas = [], reasoningParas = [];
+  let issueS = '', holdingS = '', ratioS = '', dissentS = '';
+      const factS = [], reasoningS = [];
 
-  for (const para of paras) {
-          if (!issuePara && issueSignal.test(para) && para.length < 400) {
-                    issuePara = para;
-          } else if (!holdingPara && holdingSignal.test(para)) {
-                    holdingPara = para;
-          } else if (!ratioPara && ratioSignal.test(para)) {
-                    ratioPara = para;
-          } else if (!dissentPara && dissentSignal.test(para)) {
-                    dissentPara = para;
-          } else if (factParas.length < 3) {
-                    factParas.push(para);
-          } else {
-                    reasoningParas.push(para);
-          }
+  for (const u of units) {
+          if (!issueS && issueSignal.test(u) && u.length < 350) issueS = u;
+          else if (!holdingS && holdingSignal.test(u) && u.length < 400) holdingS = u;
+          else if (!ratioS && ratioSignal.test(u) && u.length < 400) ratioS = u;
+          else if (!dissentS && dissentSignal.test(u) && u.length < 400) dissentS = u;
+          else if (factS.length < 4) factS.push(u);
+          else if (reasoningS.length < 6) reasoningS.push(u);
   }
 
   return {
-          facts:     summariseFacts(factParas.join('\n\n')) || 'Not specified',
-          issue:     summariseIssue(issuePara) || 'Not specified',
-          holding:   summariseHolding(holdingPara) || 'Not specified',
-          ratio:     summariseRatio(ratioPara) || 'Not specified',
-          reasoning: summariseReasoning(reasoningParas.join('\n')) || 'Not specified',
-          dissent:   summariseDissent(dissentPara) || 'Not specified',
+          facts:     factS.length ? factS.join(' ') : 'Not specified',
+          issue:     issueS || 'Not specified',
+          holding:   holdingS || 'Not specified',
+          ratio:     ratioS || 'Not specified',
+          reasoning: reasoningS.length ? reasoningS.join(' ') : 'Not specified',
+          dissent:   dissentS || 'Not specified',
           notes:     'Not specified',
   };
 }
@@ -469,6 +535,7 @@ function extract(rawText, filename) {
   }
 
   const ns = v => (v && v.trim().length > 3 ? v.trim() : 'Not specified');
+      const sec = v => ns(clamp(v));   // section text: clamped so it never dumps raw
 
   return {
           name:      ns(name),
@@ -476,13 +543,13 @@ function extract(rawText, filename) {
           court:     ns(court),
           year:      year || '',
           judges:    ns(judges),
-          facts:     ns(facts),
-          issue:     ns(issue),
-          holding:   ns(holding),
-          ratio:     ns(ratio),
-          reasoning: ns(reasoning),
-          dissent:   ns(dissent),
-          notes:     ns(notes),
+          facts:     sec(facts),
+          issue:     sec(issue),
+          holding:   sec(holding),
+          ratio:     sec(ratio),
+          reasoning: sec(reasoning),
+          dissent:   sec(dissent),
+          notes:     sec(notes),
   };
 }
 
