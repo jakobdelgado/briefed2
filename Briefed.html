@@ -986,6 +986,25 @@ function buildPDF(data) {
   const CW = PW - ML - MR;
   let y = MT;
 
+  // jsPDF's built-in fonts are WinAnsi-only; transliterate common Unicode so
+  // arrows, dashes, smart quotes etc. render cleanly instead of as garbled,
+  // character-spaced runs. Newlines are preserved.
+  function asciiize(s) {
+    return String(s == null ? '' : s)
+      .replace(/[‘’‚′‵]/g, "'")
+      .replace(/[“”„″]/g, '"')
+      .replace(/[–—−]/g, '-')
+      .replace(/→/g, '->').replace(/←/g, '<-')
+      .replace(/[↑↓↔⇒]/g, '-')
+      .replace(/…/g, '...')
+      .replace(/[•●▪◦‣⁃·‧]/g, '-')
+      .replace(/ /g, ' ')
+      .replace(/[​-‍﻿]/g, '')
+      .replace(/[^\x09\x0A\x0D\x20-\x7E¡-ÿ]/g, '');
+  }
+  data = Object.fromEntries(Object.entries(data).map(
+    ([k, v]) => [k, typeof v === 'string' ? asciiize(v) : v]));
+
   const NAVY   = [59, 18, 25];
   const NAVY2  = [74, 26, 34];
   const GOLD   = [200, 16, 46];
@@ -1043,69 +1062,64 @@ function buildPDF(data) {
   }
 
   function sectionBody(text) {
-    if (!text || text.trim() === '' || text.trim() === 'Not specified.') {
-      checkPage(8);
+    if (!text || !text.trim() || /^not specified\.?$/i.test(text.trim())) {
+      checkPage(12);
       doc.setFillColor(...CREAM);
-      doc.rect(ML, y, CW, 8, 'F');
       doc.setDrawColor(...GOLD);
       doc.setLineWidth(0.15);
-      doc.rect(ML, y, CW, 8, 'S');
+      doc.rect(ML, y, CW, 8, 'FD');
       setFont('italic', 9, MUTED);
       doc.text('Not specified.', ML + 4, y + 5.5);
-      y += 8 + 3;
+      y += 8 + 4;
       return;
     }
-    const paragraphs = text.split('\n\n').map(p => p.trim()).filter(Boolean);
-    const startY = y;
-    let blockH = 0;
-    const allLines = [];
-    paragraphs.forEach((para, pi) => {
-      const lines = wrapText(para.replace(/\n/g,' '), CW - 8, 9.5, 'normal');
-      lines.forEach(l => allLines.push({ text: l, gap: false }));
-      if (pi < paragraphs.length - 1) allLines.push({ text: '', gap: true });
+
+    // Preserve the engine's line structure: each line (a fact, a ratio point,
+    // a judge sub-heading) stays on its own line; blank lines become gaps.
+    const lineH = 5.2, padV = 4, gapH = 2.4, indent = 5;
+    const render = [];   // { text } | { gap:true }
+    text.split('\n').forEach(rl => {
+      const line = rl.trim();
+      if (!line) { render.push({ gap: true }); return; }
+      wrapText(line, CW - indent * 2, 9.5, 'normal').forEach(w => render.push({ text: w }));
     });
-    const lineH = 5.2;
-    const padV = 5;
-    let bh = padV;
-    allLines.forEach(l => { bh += l.gap ? 2.5 : lineH; });
-    bh += padV;
+    // Collapse any leading/trailing/double gaps.
+    while (render.length && render[0].gap) render.shift();
+    while (render.length && render[render.length - 1].gap) render.pop();
 
-    checkPage(Math.min(bh, 40));
-    const boxY = y;
-    doc.setFillColor(...CREAM);
-    doc.setDrawColor(220, 215, 200);
-    doc.setLineWidth(0.15);
-    doc.rect(ML, boxY, CW, 0, 'S');
-
-    doc.setFillColor(...GOLD);
-    doc.rect(ML, y, 2, bh, 'F');
-    doc.setFillColor(248, 246, 240);
-    doc.rect(ML + 2, y, CW - 2, bh, 'F');
-    doc.setDrawColor(220, 215, 200);
-    doc.setLineWidth(0.15);
-    doc.rect(ML + 2, y, CW - 2, bh, 'S');
-
-    let ty = y + padV;
-    allLines.forEach(l => {
-      if (l.gap) { ty += 2.5; return; }
-      checkPage(lineH + 2);
-      if (ty > y + bh - padV + 2) {
-        doc.setFillColor(...GOLD);
-        doc.rect(ML, y, 2, bh, 'F');
-        doc.setFillColor(248, 246, 240);
-        doc.rect(ML + 2, y, CW - 2, bh, 'F');
-        doc.setDrawColor(220, 215, 200);
-        doc.setLineWidth(0.15);
-        doc.rect(ML + 2, y, CW - 2, bh, 'S');
-        y = MT + 6;
-        ty = y + padV;
-        bh = allLines.length * lineH + padV * 2;
+    // Paginate: draw a cream box per page segment so long sections never break.
+    let i = 0;
+    while (i < render.length) {
+      const avail = (PH - MB) - y - padV * 2;
+      let count = 0, h = 0;
+      for (let j = i; j < render.length; j++) {
+        const add = render[j].gap ? gapH : lineH;
+        if (h + add > avail && count > 0) break;
+        h += add; count++;
       }
-      setFont('normal', 9.5, BODY);
-      doc.text(l.text, ML + 5, ty + 3.8);
-      ty += lineH;
-    });
-    y = boxY + bh + 4;
+      if (count === 0) { doc.addPage(); y = MT; drawHeader(); y += 6; continue; }
+
+      const boxH = h + padV * 2;
+      doc.setFillColor(...GOLD);
+      doc.rect(ML, y, 2, boxH, 'F');
+      doc.setFillColor(248, 246, 240);
+      doc.rect(ML + 2, y, CW - 2, boxH, 'F');
+      doc.setDrawColor(220, 215, 200);
+      doc.setLineWidth(0.15);
+      doc.rect(ML + 2, y, CW - 2, boxH, 'S');
+
+      let ty = y + padV + 3.8;
+      const end = i + count;
+      for (; i < end; i++) {
+        if (render[i].gap) { ty += gapH; continue; }
+        setFont('normal', 9.5, BODY);
+        doc.text(render[i].text, ML + indent, ty);
+        ty += lineH;
+      }
+      y += boxH;
+      if (i < render.length) { doc.addPage(); y = MT; drawHeader(); y += 6; }
+      else y += 4;
+    }
   }
 
   // ── PAGE 1 ──────────────────────────────────────────────────────────
@@ -1128,19 +1142,25 @@ function buildPDF(data) {
 
   rule(y, GOLD, 0.6); y += 3;
 
-  // Court / Judges bar
+  // Court / Judges block — wraps long judicial panels instead of overflowing.
+  const VAL = [248, 224, 228];
+  const courtLines = wrapText(data.court || 'Not specified', CW - 26, 8.5, 'normal');
+  const judgeLines = wrapText(data.judges || 'Not specified', CW - 26, 8.5, 'normal');
+  const rowH = 4.6;
+  const barH = 4 + courtLines.length * rowH + 1.5 + judgeLines.length * rowH + 4;
   doc.setFillColor(...NAVY);
-  doc.rect(ML, y, CW, 10, 'F');
+  doc.rect(ML, y, CW, barH, 'F');
+  let by = y + 5.5;
   setFont('bold', 8.5, LBLUE);
-  doc.text('Court:', ML + 3, y + 6.5);
-  setFont('normal', 8.5, [200, 220, 245]);
-  doc.text(data.court || 'Not specified', ML + 20, y + 6.5);
+  doc.text('Court:', ML + 3, by);
+  setFont('normal', 8.5, VAL);
+  courtLines.forEach((l, idx) => doc.text(l, ML + 22, by + idx * rowH));
+  by += courtLines.length * rowH + 1.5;
   setFont('bold', 8.5, LBLUE);
-  doc.text('Judges:', ML + 85, y + 6.5);
-  setFont('normal', 8.5, [200, 220, 245]);
-  const judgesTrunc = (data.judges || 'Not specified').substring(0, 60);
-  doc.text(judgesTrunc, ML + 105, y + 6.5);
-  y += 14;
+  doc.text('Judges:', ML + 3, by);
+  setFont('normal', 8.5, VAL);
+  judgeLines.forEach((l, idx) => doc.text(l, ML + 22, by + idx * rowH));
+  y += barH + 4;
 
   // Sections
   const SECTIONS = [
