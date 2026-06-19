@@ -90,8 +90,14 @@ const HEADINGS = {
 function detectHeading(line) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.length > 80) return null;
+      // Also test with a trailing parenthetical descriptor removed, e.g.
+      // "FACTS (Gots to know)" or "NOTES (Can include takeaways...)".
+      const noParen = trimmed.replace(/\s*\([^)]*\)\s*$/, '').trim();
+      const candidates = noParen && noParen !== trimmed ? [trimmed, noParen] : [trimmed];
       for (const [section, patterns] of Object.entries(HEADINGS)) {
-              if (patterns.some(p => p.test(trimmed))) return section;
+              for (const c of candidates) {
+                      if (patterns.some(p => p.test(c))) return section;
+              }
       }
       return null;
 }
@@ -121,8 +127,8 @@ function extractCaseName(text) {
         }
   }
 
-  const labelMatch = text.match(/^case\s+name\s*[:]\s*(.+)$/im);
-      if (labelMatch) return labelMatch[1].trim();
+  const labelMatch = text.match(/^case\s+name\s*[:][ \t]*([^\n]+)$/im);
+      if (labelMatch && labelMatch[1].trim()) return labelMatch[1].trim();
 
   return 'Not specified';
 }
@@ -156,8 +162,8 @@ function extractCourt(text) {
               [/privy\s+council/i, 'Privy Council'],
               [/uk\s+supreme\s+court|\bUKSC\b/, 'UK Supreme Court'],
             ];
-      const label = text.match(/^court\s*[:]\s*(.+)$/im);
-      if (label) return label[1].trim();
+      const label = text.match(/^court\s*[:][ \t]*([^\n]+)$/im);
+      if (label && label[1].trim()) return label[1].trim();
       for (const [p, name] of courts) {
               if (p.test(text)) return name;
       }
@@ -167,12 +173,14 @@ function extractCourt(text) {
 function extractJudges(text) {
       const coram = text.match(/(?:coram|before|bench)\s*[:]\s*([^\n]+)/i);
       if (coram) return coram[1].trim().replace(/\s+/g, ' ');
-      const label = text.match(/^judges?\s*[:]\s*(.+)$/im);
-      if (label) return label[1].trim();
-      // Scan header for judicial titles
-  const header = text.substring(0, 600);
-      const found = header.match(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:CJ|ACJ|JA|JJ?|FCJ|LJJ?|MR|Justice)/g);
-      if (found && found.length > 0) return [...new Set(found)].join(', ');
+      const label = text.match(/^judges?\s*[:][ \t]*([^\n]+)$/im);
+      if (label && label[1].trim()) return label[1].trim();
+      // Scan for judicial titles — prefer the header, then fall back to the
+      // whole document (panels are often named in the holding, e.g. "Gibbs CJ").
+  const titlePattern = /[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:CJ|ACJ|JA|JJ?|FCJ|LJJ?|MR|Justice)/g;
+      const header = text.substring(0, 600).match(titlePattern);
+      const found = (header && header.length > 0) ? header : text.match(titlePattern);
+      if (found && found.length > 0) return [...new Set(found)].slice(0, 8).join(', ');
       return 'Not specified';
 }
 
@@ -221,19 +229,44 @@ function segmentDocument(text) {
 // ── SUMMARISATION HELPERS ─────────────────────────────────────────────────────
 // Produce concise summaries — strip verbatim repetition, keep key points
 
+// Strip page markers and blank lines; keep meaningful lines intact.
+function meaningfulLines(raw) {
+      return raw.split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .filter(l => !/^page\s+\d+/i.test(l) && !/^\d+\s+of\s+\d+$/.test(l));
+}
+
+// A section is "list-like" when it is built from short bullet/fragment lines
+// (e.g. the itemised facts or ratio in a pre-formatted brief) rather than
+// flowing prose. Such content must be preserved line-by-line, not flattened
+// into run-on sentences.
+function looksListy(raw) {
+      const lines = meaningfulLines(raw);
+      if (lines.length < 3) return false;
+      // Explicit list markers: bullets, numbering, arrows, or a "label:" line.
+      const explicit = lines.filter(l => /^[•‣◦▪·\-\*]|^\d+[.)]\s|→|:\s*$/.test(l)).length;
+      // Itemised briefs put one point per line, so most lines are short.
+      const shortLines = lines.filter(l => l.length <= 140).length;
+      return explicit >= 2 || (lines.length >= 4 && shortLines >= Math.ceil(lines.length * 0.7));
+}
+
 function summariseFacts(raw) {
       if (!raw || raw.length < 10) return 'Not specified';
-      // Split into sentences, keep up to ~4 most legally relevant
+      // Preserve itemised facts as discrete lines rather than collapsing them.
+      if (looksListy(raw)) {
+              const lines = meaningfulLines(raw).slice(0, 14);
+              return lines.length ? lines.join('\n') : 'Not specified';
+      }
+      // Otherwise treat as prose: keep up to 5 legally relevant sentences.
   const sentences = raw
         .replace(/\n+/g, ' ')
         .split(/(?<=[.!?])\s+/)
         .map(s => s.trim())
-        .filter(s => s.length > 20);
-      // Remove sentences that are just headings or page markers
-  const filtered = sentences.filter(s => !/^page\s+\d+/i.test(s) && !/^\d+\s+of\s+\d+$/.test(s));
-      if (filtered.length === 0) return 'Not specified';
-      // Return up to 5 sentences
-  return filtered.slice(0, 5).join(' ');
+        .filter(s => s.length > 20)
+        .filter(s => !/^page\s+\d+/i.test(s) && !/^\d+\s+of\s+\d+$/.test(s));
+      if (sentences.length === 0) return 'Not specified';
+      return sentences.slice(0, 5).join(' ');
 }
 
 function summariseIssue(raw) {
@@ -253,6 +286,12 @@ function summariseHolding(raw) {
 
 function summariseRatio(raw) {
       if (!raw || raw.length < 10) return 'Not specified';
+      // Ratio frequently itemises controlling principles and quotes key
+      // judicial statements — preserve those lines rather than flattening.
+      if (looksListy(raw)) {
+              const lines = meaningfulLines(raw).slice(0, 14);
+              return lines.length ? lines.join('\n') : 'Not specified';
+      }
       const clean = raw.replace(/\n+/g, ' ').trim();
       const sentences = clean.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 10);
       return sentences.slice(0, 3).join(' ') || clean.substring(0, 400);
@@ -260,6 +299,19 @@ function summariseRatio(raw) {
 
 function summariseReasoning(raw) {
       if (!raw || raw.length < 10) return 'Not specified';
+      // Itemised reasoning (judge sub-headings followed by bullet points, as in
+      // a pre-formatted brief) must keep its line structure and per-judge
+      // attribution intact rather than being collapsed into prose. A standalone
+      // judge name on its own line (e.g. "Gibbs CJ", "Mason & Deane JJ") is a
+      // strong attribution signal even when the body is otherwise prose.
+  const judgeHeader = /^[A-Z][a-z]+(?:\s+(?:&|and)\s+[A-Z][a-z]+|\s+[A-Z][a-z]+){0,3}\s+(?:CJ|ACJ|JA|JJ|J|FCJ|LJ|LJJ|MR)\.?$/;
+      const headerLines = meaningfulLines(raw).filter(l => judgeHeader.test(l));
+      if (looksListy(raw) || headerLines.length >= 2) {
+              const lines = meaningfulLines(raw).slice(0, 20)
+                // Blank line before each judge sub-heading for readable attribution.
+                .map((l, i) => (i > 0 && judgeHeader.test(l)) ? '\n' + l : l);
+              return lines.length ? lines.join('\n') : 'Not specified';
+      }
       // Preserve judge attribution lines, but cap each judge's contribution
   const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
@@ -302,6 +354,10 @@ function summariseReasoning(raw) {
 
 function summariseDissent(raw) {
       if (!raw || /not\s+specified/i.test(raw.trim()) || raw.trim().length < 10) return 'Not specified';
+      if (looksListy(raw)) {
+              const lines = meaningfulLines(raw).slice(0, 12);
+              return lines.length ? lines.join('\n') : 'Not specified';
+      }
       const clean = raw.replace(/\n+/g, ' ').trim();
       const sentences = clean.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 10);
       return sentences.slice(0, 3).join(' ') || clean.substring(0, 300);
@@ -309,6 +365,10 @@ function summariseDissent(raw) {
 
 function summariseNotes(raw) {
       if (!raw || /not\s+specified/i.test(raw.trim()) || raw.trim().length < 10) return 'Not specified';
+      if (looksListy(raw)) {
+              const lines = meaningfulLines(raw).slice(0, 16);
+              return lines.length ? lines.join('\n') : 'Not specified';
+      }
       const clean = raw.replace(/\n+/g, ' ').trim();
       const sentences = clean.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 10);
       return sentences.slice(0, 4).join(' ') || clean.substring(0, 400);
