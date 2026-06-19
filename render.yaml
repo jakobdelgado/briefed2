@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: briefed2
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true

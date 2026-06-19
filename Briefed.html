@@ -826,13 +826,13 @@ function showResult(data, filename) {
   }
 
   const SECTIONS = [
-    ['Relevant Facts', data.facts],
-    ['Issue',          data.issue],
-    ['Holding',        data.holding],
-    ['Ratio Decidendi', data.ratio],
-    ['Reasoning',      data.reasoning],
-    ['Dissent',        data.dissent],
-    ['Notes',          data.notes],
+    ['Relevant Facts',              data.facts],
+    ['Issue',                       data.issue],
+    ['Holding',                     data.holding],
+    ['Reason for Decision (Ratio)', data.ratio],
+    ['Reasoning',                   data.reasoning],
+    ['Dissent (if any)',            data.dissent],
+    ['Notes',                       data.notes],
   ];
 
   const container = document.getElementById('sections-container');
