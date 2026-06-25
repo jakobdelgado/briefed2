@@ -612,7 +612,7 @@ function cleanText(raw) {
     if (c === 9 || c === 10 || c === 13 || (c >= 32 && c !== 127)) out += s[i];
   }
   out = out.replace(/[ \t]{3,}/g, '  ').replace(/\n{5,}/g, '\n\n\n');
-  return out.trim().substring(0, 80000);
+  return out.trim().substring(0, 150000);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -634,12 +634,25 @@ async function readFileText(file) {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      let lastY = null, pageText = '';
+      let lastY = null, lastXEnd = null, pageText = '';
       for (const item of content.items) {
-        const y = item.transform ? Math.round(item.transform[5]) : null;
-        if (lastY !== null && y !== null && Math.abs(y - lastY) > 5) pageText += '\n';
-        pageText += item.str;
+        const str = item.str || '';
+        const tx = item.transform || [1, 0, 0, 1, 0, 0];
+        const x = tx[4], y = Math.round(tx[5]);
+        const fontH = Math.abs(tx[3]) || 10;
+        if (lastY !== null && Math.abs(y - lastY) > Math.max(3, fontH * 0.5)) {
+          // New visual line.
+          if (!/\n$/.test(pageText)) pageText += '\n';
+        } else if (lastXEnd !== null && x - lastXEnd > 1 &&
+                   !/\s$/.test(pageText) && str && !/^\s/.test(str)) {
+          // Same line but a horizontal gap — insert the missing space so
+          // adjacent fragments don't glue into "AUSTRALIAMASON" / "JJF.C.".
+          pageText += ' ';
+        }
+        pageText += str;
+        if (item.hasEOL) { if (!/\n$/.test(pageText)) pageText += '\n'; }
         lastY = y;
+        lastXEnd = x + (item.width || 0);
       }
       fullText += pageText + '\n\n';
     }
