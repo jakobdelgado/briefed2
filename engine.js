@@ -443,12 +443,11 @@ function clamp(s, maxChars = 900) {
 // locate signal sentences but cannot truly comprehend a judgment.
 
 function fallbackExtract(text) {
-      // Paragraphs where available; otherwise sentence units (PDF text often has
-      // no blank lines at all).
-  let units = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 40);
-      if (units.length < 5) {
-              units = text.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 30);
-      }
+      // Always work at sentence granularity. PDF text can arrive as page-sized
+      // paragraphs (pdf.js inserts a blank line between pages) or as one big
+      // blob; either way the signal matchers below need short units, so split
+      // on sentence boundaries rather than paragraphs.
+  let units = text.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 30);
       // Strip catalogue / citation / page-count header junk so it can't leak in.
   const junk = /CaseBase|Unreported\s+Judgments|\b\d+\s+Pages\b|ANZ\s+ConvR|Aust\s+Contract\s+R|\bALJR\b|F\.?C\.?\s*\d|BC\d{6}/i;
       units = units.filter(u => !junk.test(u));
@@ -525,23 +524,23 @@ function extract(rawText, filename) {
                                 : deriveNotes(segments);
   }
 
-  // Only trust the structured pass for a genuine pre-formatted brief: one with
-  // a real FACTS heading, or several distinct section headings. A raw judgment
-  // that merely contains a stray "Order"/"Reasons" line (1-2 false headings,
-  // no FACTS) must not be left as all "Not specified" — run the signal fallback
-  // and fill any gaps, keeping whatever the structured pass did capture.
+  // Always run the signal fallback and fill any gaps the structured pass left,
+  // so a raw judgment (or one with stray "Order"/"Reasons" heading lines) is
+  // never returned as all "Not specified". The structured value wins wherever
+  // it actually captured content. Dissent is the one exception: for a genuine
+  // pre-formatted brief (real FACTS heading or several section headings) we do
+  // not fabricate a dissent the document doesn't contain.
   const real = v => v && !/^not\s+specified/i.test(String(v).trim());
       const trustStructured = hasHeadings && (!!segments.facts || Object.keys(segments).length >= 4);
-      if (!trustStructured) {
-              const fb = fallbackExtract(text);
-              facts     = real(facts)     ? facts     : fb.facts;
-              issue     = real(issue)     ? issue     : fb.issue;
-              holding   = real(holding)   ? holding   : fb.holding;
-              ratio     = real(ratio)     ? ratio     : fb.ratio;
-              reasoning = real(reasoning) ? reasoning : fb.reasoning;
-              dissent   = real(dissent)   ? dissent   : fb.dissent;
-              notes     = real(notes)     ? notes     : fb.notes;
-      }
+      const fb = fallbackExtract(text);
+      const pick = (s, f) => (real(s) ? s : f);
+      facts     = pick(facts, fb.facts);
+      issue     = pick(issue, fb.issue);
+      holding   = pick(holding, fb.holding);
+      ratio     = pick(ratio, fb.ratio);
+      reasoning = pick(reasoning, fb.reasoning);
+      dissent   = real(dissent) ? dissent : (trustStructured ? 'Not specified' : fb.dissent);
+      notes     = pick(notes, fb.notes);
 
   const ns = v => (v && v.trim().length > 3 ? v.trim() : 'Not specified');
       const sec = v => ns(clamp(v));   // section text: clamped so it never dumps raw
