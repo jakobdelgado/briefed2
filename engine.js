@@ -523,16 +523,25 @@ function extract(rawText, filename) {
           notes     = segments.notes
                         ? summariseNotes(segments.notes)
                                 : deriveNotes(segments);
-  } else {
-          const fb = fallbackExtract(text);
-          facts     = fb.facts;
-          issue     = fb.issue;
-          holding   = fb.holding;
-          ratio     = fb.ratio;
-          reasoning = fb.reasoning;
-          dissent   = fb.dissent;
-          notes     = fb.notes;
   }
+
+  // Only trust the structured pass for a genuine pre-formatted brief: one with
+  // a real FACTS heading, or several distinct section headings. A raw judgment
+  // that merely contains a stray "Order"/"Reasons" line (1-2 false headings,
+  // no FACTS) must not be left as all "Not specified" — run the signal fallback
+  // and fill any gaps, keeping whatever the structured pass did capture.
+  const real = v => v && !/^not\s+specified/i.test(String(v).trim());
+      const trustStructured = hasHeadings && (!!segments.facts || Object.keys(segments).length >= 4);
+      if (!trustStructured) {
+              const fb = fallbackExtract(text);
+              facts     = real(facts)     ? facts     : fb.facts;
+              issue     = real(issue)     ? issue     : fb.issue;
+              holding   = real(holding)   ? holding   : fb.holding;
+              ratio     = real(ratio)     ? ratio     : fb.ratio;
+              reasoning = real(reasoning) ? reasoning : fb.reasoning;
+              dissent   = real(dissent)   ? dissent   : fb.dissent;
+              notes     = real(notes)     ? notes     : fb.notes;
+      }
 
   const ns = v => (v && v.trim().length > 3 ? v.trim() : 'Not specified');
       const sec = v => ns(clamp(v));   // section text: clamped so it never dumps raw
